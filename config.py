@@ -28,7 +28,7 @@ for _dir in [OUTPUT_DIR, SAMPLE_INPUT_DIR, TEMPLATE_DIR, TEMP_IMAGE_DIR]:
 # ──────────────────────────────────────────────
 # LLM Provider Settings
 # ──────────────────────────────────────────────
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "anthropic"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # "openai", "anthropic", or "gemini"
 
 # OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -37,6 +37,10 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 # Anthropic
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+
+# Google Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 # LLM Parameters
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
@@ -119,6 +123,14 @@ def get_llm_config() -> dict:
             "temperature": LLM_TEMPERATURE,
             "max_tokens": LLM_MAX_TOKENS,
         }
+    if LLM_PROVIDER == "gemini":
+        return {
+            "provider": "gemini",
+            "api_key": GEMINI_API_KEY,
+            "model": GEMINI_MODEL,
+            "temperature": LLM_TEMPERATURE,
+            "max_tokens": LLM_MAX_TOKENS,
+        }
     return {
         "provider": "openai",
         "api_key": OPENAI_API_KEY,
@@ -137,10 +149,27 @@ def validate_config() -> list[str]:
     """
     errors = []
     cfg = get_llm_config()
+
+    # Map provider to env var name
+    key_var_map = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+    }
+    key_var = key_var_map.get(cfg["provider"], "API_KEY")
+
+    # Check if API key is missing
     if not cfg["api_key"]:
         errors.append(
             f"API key for '{cfg['provider']}' is not set. "
-            f"Set {'OPENAI_API_KEY' if cfg['provider'] == 'openai' else 'ANTHROPIC_API_KEY'} "
-            f"in your .env file."
+            f"Set {key_var} in your .env file."
         )
+    # Check if API key is still a placeholder
+    elif "your-" in cfg["api_key"].lower() or cfg["api_key"].endswith("-here"):
+        errors.append(
+            f"API key for '{cfg['provider']}' appears to be a placeholder. "
+            f"Replace it with your real API key in the .env file."
+        )
+
     return errors
+

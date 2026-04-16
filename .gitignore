@@ -21,6 +21,7 @@ outputs/*
 
 # Extracted images (temporary)
 outputs/extracted_images/
+outputs/debug/
 
 # OS files
 .DS_Store

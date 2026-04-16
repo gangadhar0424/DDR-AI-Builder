@@ -179,10 +179,12 @@ with st.sidebar:
     st.markdown("## ⚙️ Configuration")
 
     # LLM Provider
+    provider_list = ["gemini", "openai", "anthropic"]
+    default_idx = provider_list.index(config.LLM_PROVIDER) if config.LLM_PROVIDER in provider_list else 0
     llm_provider = st.selectbox(
         "LLM Provider",
-        ["openai", "anthropic"],
-        index=0 if config.LLM_PROVIDER == "openai" else 1,
+        provider_list,
+        index=default_idx,
     )
 
     # API Key
@@ -194,7 +196,7 @@ with st.sidebar:
             help="Enter your OpenAI API key",
         )
         model = st.text_input("Model", value=config.OPENAI_MODEL)
-    else:
+    elif llm_provider == "anthropic":
         api_key = st.text_input(
             "Anthropic API Key",
             value=config.ANTHROPIC_API_KEY,
@@ -202,6 +204,14 @@ with st.sidebar:
             help="Enter your Anthropic API key",
         )
         model = st.text_input("Model", value=config.ANTHROPIC_MODEL)
+    else:  # gemini
+        api_key = st.text_input(
+            "Gemini API Key",
+            value=config.GEMINI_API_KEY,
+            type="password",
+            help="Enter your Google Gemini API key",
+        )
+        model = st.text_input("Model", value=config.GEMINI_MODEL)
 
     st.markdown("---")
     st.markdown("### 🔧 Advanced")
@@ -301,9 +311,12 @@ if generate_clicked and can_generate:
     if llm_provider == "openai":
         config.OPENAI_API_KEY = api_key
         config.OPENAI_MODEL = model
-    else:
+    elif llm_provider == "anthropic":
         config.ANTHROPIC_API_KEY = api_key
         config.ANTHROPIC_MODEL = model
+    else:  # gemini
+        config.GEMINI_API_KEY = api_key
+        config.GEMINI_MODEL = model
     config.LLM_PROVIDER = llm_provider
     config.LLM_TEMPERATURE = temperature
     config.SIMILARITY_THRESHOLD = similarity_threshold

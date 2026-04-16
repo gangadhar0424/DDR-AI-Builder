@@ -10,10 +10,11 @@ Can be used programmatically or via the Streamlit UI.
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 from loguru import logger
 
@@ -105,6 +106,35 @@ class DDRPipeline:
         self.conflict_detector = ConflictDetector()
         self.missing_handler = MissingDataHandler()
         self.ddr_generator = DDRGenerator()
+        self.debug_dir = config.OUTPUT_DIR / "debug"
+
+    def _save_debug(self, filename: str, data) -> None:
+        """Save intermediate artifact to outputs/debug/ for traceability."""
+        try:
+            self.debug_dir.mkdir(parents=True, exist_ok=True)
+            path = self.debug_dir / filename
+
+            if hasattr(data, "to_dict"):
+                serializable = data.to_dict()
+            elif hasattr(data, "__dataclass_fields__"):
+                serializable = asdict(data)
+            elif isinstance(data, list):
+                serializable = [
+                    item.to_dict() if hasattr(item, "to_dict")
+                    else asdict(item) if hasattr(item, "__dataclass_fields__")
+                    else item
+                    for item in data
+                ]
+            else:
+                serializable = data
+
+            path.write_text(
+                json.dumps(serializable, indent=2, default=str, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            logger.debug(f"Debug artifact saved: {filename}")
+        except Exception as e:
+            logger.warning(f"Failed to save debug artifact {filename}: {e}")
 
     def run(
         self,
@@ -144,9 +174,21 @@ class DDRPipeline:
             # ── Phase 2: Parse PDFs ──
             self.progress("Parsing inspection PDF...", 0.05)
             result.inspection_parsed = self.pdf_parser.parse(inspection_pdf)
+            self._save_debug("parsed_inspection_raw.json", {
+                "filename": result.inspection_parsed.file_name,
+                "total_pages": result.inspection_parsed.total_pages,
+                "headings_count": len(result.inspection_parsed.all_headings),
+                "headings": result.inspection_parsed.all_headings[:50],
+            })
 
             self.progress("Parsing thermal PDF...", 0.12)
             result.thermal_parsed = self.pdf_parser.parse(thermal_pdf)
+            self._save_debug("parsed_thermal_raw.json", {
+                "filename": result.thermal_parsed.file_name,
+                "total_pages": result.thermal_parsed.total_pages,
+                "headings_count": len(result.thermal_parsed.all_headings),
+                "headings": result.thermal_parsed.all_headings[:50],
+            })
 
             # ── Phase 3: Extract images ──
             self.progress("Extracting images from inspection PDF...", 0.18)
@@ -167,11 +209,15 @@ class DDRPipeline:
             result.inspection_observations = self.observation_extractor.extract(
                 result.inspection_parsed
             )
+            self._save_debug("extracted_inspection_observations.json",
+                             result.inspection_observations)
 
             self.progress("Extracting thermal observations (LLM)...", 0.40)
             result.thermal_observations = self.thermal_extractor.extract(
                 result.thermal_parsed
             )
+            self._save_debug("extracted_thermal_observations.json",
+                             result.thermal_observations)
 
             # ── Phase 5: Merge observations ──
             self.progress("Merging observations (semantic matching)...", 0.55)
@@ -179,12 +225,14 @@ class DDRPipeline:
                 result.inspection_observations,
                 result.thermal_observations,
             )
+            self._save_debug("merged_observations.json", result.merge_result)
 
             # ── Phase 6: Detect conflicts ──
             self.progress("Detecting conflicts...", 0.62)
             result.conflict_report = self.conflict_detector.detect(
                 result.merge_result.merged_observations
             )
+            self._save_debug("conflict_analysis.json", result.conflict_report)
 
             # ── Phase 7: Handle missing data ──
             self.progress("Checking data completeness...", 0.67)
@@ -201,6 +249,7 @@ class DDRPipeline:
                 images=all_images,
                 report_title=report_title,
             )
+            self._save_debug("final_ddr_structured.json", result.ddr_report)
 
             # ── Phase 9: Export ──
             if "html" in export_formats:

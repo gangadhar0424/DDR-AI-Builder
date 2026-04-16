@@ -5,6 +5,7 @@ pdfplumber>=0.11.0
 # LLM Integration
 openai>=1.40.0
 anthropic>=0.34.0
+google-genai>=1.0.0
 
 # Semantic Similarity
 sentence-transformers>=3.0.0

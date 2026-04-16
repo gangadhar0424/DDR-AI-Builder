@@ -447,56 +447,85 @@ class DDRGenerator:
         images: list[ExtractedImage] | None,
     ) -> list[dict]:
         """
-        Map extracted images to a specific area based on nearby text
-        and image references in observations.
+        Map extracted images to a specific area using multi-signal ranking.
+
+        Ranking signals (weighted):
+        1. Area/heading textual similarity (weight: 0.4)
+        2. Caption/nearby-text match (weight: 0.3)
+        3. Page proximity to observations (weight: 0.2)
+        4. Image reference match (weight: 0.1)
+
+        Falls back to "Image Mapping Uncertain" if confidence is low.
         """
         if not images:
             return []
 
-        mapped = []
         area_lower = area.lower()
+        area_words = set(area_lower.split()) - {"the", "a", "an", "of", "in", "at", "on", "-"}
 
-        # Collect image references from observations
+        # Collect observation page numbers and image references
+        obs_pages = set()
         obs_image_refs = set()
+        obs_keywords = set()
         for obs in area_obs:
+            for page_ref in obs.pages:
+                # Extract numeric page from "source p.X" format
+                import re
+                nums = re.findall(r"\d+", page_ref)
+                obs_pages.update(int(n) for n in nums)
             for ref in obs.image_references:
                 obs_image_refs.add(ref.lower())
+            # Extract key terms from observation text
+            for word in obs.observation.lower().split():
+                if len(word) > 3:
+                    obs_keywords.add(word)
 
+        scored_images = []
         for img in images:
-            matched = False
+            score = 0.0
+            nearby = (img.nearby_text or "").lower()
 
-            # Match by nearby text containing area name
-            if img.nearby_text and area_lower in img.nearby_text.lower():
-                matched = True
+            # Signal 1: Area name in nearby text (0.4)
+            if area_words:
+                overlap = sum(1 for w in area_words if w in nearby)
+                area_score = min(1.0, overlap / max(len(area_words), 1))
+                score += area_score * 0.4
 
-            # Match by image reference
-            if not matched and obs_image_refs:
+            # Signal 2: Caption/keyword similarity (0.3)
+            if obs_keywords and nearby:
+                keyword_hits = sum(1 for kw in list(obs_keywords)[:20] if kw in nearby)
+                caption_score = min(1.0, keyword_hits / 5)
+                score += caption_score * 0.3
+
+            # Signal 3: Page proximity (0.2)
+            if obs_pages:
+                min_distance = min(abs(img.page_number - p) for p in obs_pages)
+                page_score = max(0.0, 1.0 - (min_distance / 5))
+                score += page_score * 0.2
+
+            # Signal 4: Direct image reference match (0.1)
+            if obs_image_refs:
                 for ref in obs_image_refs:
-                    if ref in img.nearby_text.lower():
-                        matched = True
+                    if ref in nearby:
+                        score += 0.1
                         break
 
-            # Match by page number overlap
-            if not matched:
-                for obs in area_obs:
-                    for page_ref in obs.pages:
-                        if str(img.page_number) in page_ref:
-                            matched = True
-                            break
-                    if matched:
-                        break
-
-            if matched:
+            if score > 0.15:  # Minimum threshold
+                mapping_label = "Confident" if score >= 0.5 else "Uncertain"
                 img_data = {
                     "path": img.image_path,
                     "page": img.page_number,
                     "width": img.width,
                     "height": img.height,
                     "base64": self._image_to_base64(img.image_path),
+                    "mapping_confidence": round(score, 2),
+                    "mapping_label": mapping_label,
                 }
-                mapped.append(img_data)
+                scored_images.append((score, img_data))
 
-        return mapped[:5]  # Cap images per area
+        # Sort by score descending and return top 5
+        scored_images.sort(key=lambda x: x[0], reverse=True)
+        return [img_data for _, img_data in scored_images[:5]]
 
     def _image_to_base64(self, image_path: str) -> str:
         """Convert an image file to base64 for HTML embedding."""
@@ -605,7 +634,10 @@ class DDRGenerator:
         output_path: str | Path | None = None,
     ) -> str:
         """
-        Export DDR as a Markdown document.
+        Export DDR as a professional Markdown document.
+
+        Includes source traceability, confidence scores, and structured
+        section hierarchy suitable for client delivery.
 
         Args:
             report: Completed DDRReport.
@@ -622,31 +654,91 @@ class DDRGenerator:
         lines = []
 
         lines.append(f"# {report.title}")
-        lines.append(f"\n*Generated: {report.generated_date}*\n")
+        lines.append(f"\n*Generated: {report.generated_date}*")
+        lines.append(f"*Report Version: {config.REPORT_VERSION} | "
+                      f"Company: {config.DEFAULT_COMPANY_NAME}*\n")
         lines.append("---\n")
 
+        # Metadata Summary Table
+        if report.metadata:
+            lines.append("## Report Summary\n")
+            lines.append("| Metric | Value |")
+            lines.append("|--------|-------|")
+            labels = {
+                "total_observations": "Total Observations",
+                "corroborated": "Corroborated Findings",
+                "inspection_count": "Inspection Observations",
+                "thermal_count": "Thermal Observations",
+                "areas_count": "Areas Assessed",
+                "conflicts_count": "Conflicts Detected",
+                "completeness": "Data Completeness",
+            }
+            for key, label in labels.items():
+                if key in report.metadata:
+                    lines.append(f"| {label} | {report.metadata[key]} |")
+            lines.append("")
+
         # Property Summary
-        lines.append("## 1. Property Issue Summary\n")
+        lines.append("\n## 1. Property Issue Summary\n")
         lines.append(report.property_summary)
         lines.append("")
 
         # Area Observations
-        lines.append("\n## 2. Area-wise Observations\n")
+        lines.append("\n## 2. Area-wise Diagnostic Observations\n")
         for section in report.area_observations:
-            lines.append(f"\n### {section.title}\n")
+            lines.append(f"\n### 📍 {section.title}\n")
             lines.append(section.content)
+
             if section.observations:
-                lines.append("\n**Detailed Findings:**\n")
+                lines.append("\n#### Detailed Findings\n")
                 for obs in section.observations:
+                    severity = obs.get('severity', 'N/A')
+                    confidence = obs.get('confidence_score', 0)
+                    corroborated = obs.get('is_corroborated', False)
+
+                    # Confidence badge
+                    if confidence >= 0.85:
+                        conf_badge = "🟢 High"
+                    elif confidence >= 0.65:
+                        conf_badge = "🟡 Medium"
+                    else:
+                        conf_badge = "🔴 Low"
+
+                    corr_tag = " ✅ *Corroborated*" if corroborated else ""
+
                     lines.append(
-                        f"- **{obs.get('observation', 'N/A')}** "
-                        f"(Severity: {obs.get('severity', 'N/A')}, "
-                        f"Confidence: {obs.get('confidence_score', 0):.0%})"
+                        f"- **{obs.get('observation', 'N/A')}**\n"
+                        f"  - Severity: `{severity}` | "
+                        f"Confidence: {conf_badge} ({confidence:.0%}){corr_tag}"
                     )
+
+                    # Source references
+                    sources = obs.get('sources', [])
+                    pages = obs.get('pages', [])
+                    if sources or pages:
+                        ref_parts = []
+                        for p in pages:
+                            ref_parts.append(p)
+                        if not ref_parts and sources:
+                            ref_parts = sources
+                        lines.append(
+                            f"  - 📄 Source: {', '.join(ref_parts)}"
+                        )
+
+                    # Temperature data
+                    if obs.get('temperature_data'):
+                        lines.append(
+                            f"  - 🌡️ Temperature: {obs['temperature_data']}"
+                        )
+
+                    if obs.get('recommendation'):
+                        lines.append(
+                            f"  - 💡 Recommendation: {obs['recommendation']}"
+                        )
             lines.append("")
 
         # Root Causes
-        lines.append("\n## 3. Probable Root Cause\n")
+        lines.append("\n## 3. Probable Root Cause Analysis\n")
         lines.append(report.root_causes)
 
         # Severity Assessment
@@ -667,12 +759,20 @@ class DDRGenerator:
 
         # Conflicts
         if report.conflicts:
-            lines.append("\n\n## ⚠ Detected Conflicts\n")
+            lines.append("\n\n## ⚠ Detected Conflicts Between Reports\n")
             for c in report.conflicts:
                 lines.append(
                     f"- **{c.get('area', 'Unknown')}**: {c.get('description', '')}\n"
                     f"  Resolution: {c.get('resolution_suggestion', 'N/A')}"
                 )
+
+        # Footer
+        lines.append("\n\n---\n")
+        lines.append(
+            f"*This report was generated by {config.DEFAULT_COMPANY_NAME}. "
+            f"All findings are based on automated analysis of the provided inspection "
+            f"and thermal reports and should be verified by a qualified professional.*"
+        )
 
         content = "\n".join(lines)
         output_path.parent.mkdir(parents=True, exist_ok=True)
