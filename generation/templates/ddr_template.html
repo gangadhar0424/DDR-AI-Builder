@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+    <style>
+        /* ─── Reset & Base ─── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2b6cb0;
+            --accent: #e2e8f0;
+            --bg: #ffffff;
+            --text: #1a202c;
+            --text-secondary: #4a5568;
+            --border: #e2e8f0;
+            --section-bg: #f7fafc;
+            --critical: #DC2626;
+            --high: #EA580C;
+            --medium: #CA8A04;
+            --low: #16A34A;
+            --info: #2563EB;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 50px;
+        }
+
+        /* ─── Header ─── */
+        .report-header {
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+        .report-header h1 {
+            font-size: 26pt;
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .report-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 9.5pt;
+            color: var(--text-secondary);
+            margin-top: 12px;
+        }
+        .report-meta span {
+            background: var(--section-bg);
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        .company-badge {
+            font-size: 9pt;
+            color: var(--primary-light);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* ─── Sections ─── */
+        .section {
+            margin-bottom: 28px;
+            page-break-inside: avoid;
+        }
+        .section-title {
+            font-size: 16pt;
+            font-weight: 700;
+            color: var(--primary);
+            border-left: 4px solid var(--primary-light);
+            padding-left: 14px;
+            margin-bottom: 16px;
+        }
+        .section-content {
+            padding: 16px 20px;
+            background: var(--section-bg);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            white-space: pre-wrap;
+            font-size: 10.5pt;
+            line-height: 1.7;
+        }
+
+        /* ─── Area Sections ─── */
+        .area-section {
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+        .area-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            font-size: 13pt;
+            font-weight: 600;
+        }
+        .area-content {
+            padding: 16px 20px;
+            white-space: pre-wrap;
+            font-size: 10.5pt;
+            line-height: 1.7;
+        }
+
+        /* ─── Observations Table ─── */
+        .obs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 9.5pt;
+        }
+        .obs-table th {
+            background: var(--primary);
+            color: white;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .obs-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .obs-table tr:nth-child(even) {
+            background: var(--section-bg);
+        }
+
+        /* ─── Severity Badges ─── */
+        .severity-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+        }
+        .severity-critical { background: var(--critical); }
+        .severity-high { background: var(--high); }
+        .severity-medium { background: var(--medium); }
+        .severity-low { background: var(--low); }
+        .severity-informational { background: var(--info); }
+        .severity-not-available { background: #9CA3AF; }
+
+        /* ─── Corroboration Badge ─── */
+        .corroborated {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 8pt;
+            font-weight: 600;
+            background: #047857;
+            color: white;
+        }
+
+        /* ─── Images ─── */
+        .area-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border);
+        }
+        .area-images img {
+            max-width: 280px;
+            max-height: 200px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            object-fit: contain;
+        }
+        .image-caption {
+            font-size: 8pt;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        /* ─── Conflicts ─── */
+        .conflict-card {
+            border-left: 4px solid var(--critical);
+            background: #FEF2F2;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border-radius: 0 6px 6px 0;
+        }
+        .conflict-title {
+            font-weight: 700;
+            color: var(--critical);
+            margin-bottom: 6px;
+        }
+
+        /* ─── Stats Grid ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--section-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 22pt;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-label {
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* ─── Footer ─── */
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 2px solid var(--primary);
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* ─── Print Styles ─── */
+        @media print {
+            body { padding: 20px 30px; }
+            .area-section { page-break-inside: avoid; }
+            .section { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══ HEADER ═══ -->
+    <header class="report-header">
+        <div class="company-badge">{{ company_name }}</div>
+        <h1>{{ report.title }}</h1>
+        <div class="report-meta">
+            <span>📅 {{ report.generated_date }}</span>
+            <span>📊 {{ report.metadata.total_observations }} Observations</span>
+            <span>🏠 {{ report.metadata.areas_count }} Areas</span>
+            <span>✅ {{ report.metadata.completeness }} Complete</span>
+        </div>
+    </header>
+
+    <!-- ═══ STATS ═══ -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ report.metadata.total_observations }}</div>
+            <div class="stat-label">Total Findings</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ report.metadata.corroborated }}</div>
+            <div class="stat-label">Corroborated</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ report.metadata.inspection_count }}</div>
+            <div class="stat-label">Inspection Obs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ report.metadata.thermal_count }}</div>
+            <div class="stat-label">Thermal Obs</div>
+        </div>
+    </div>
+
+    <!-- ═══ 1. PROPERTY SUMMARY ═══ -->
+    <div class="section">
+        <h2 class="section-title">1. Property Issue Summary</h2>
+        <div class="section-content">{{ report.property_summary }}</div>
+    </div>
+
+    <!-- ═══ 2. AREA-WISE OBSERVATIONS ═══ -->
+    <div class="section">
+        <h2 class="section-title">2. Area-wise Observations</h2>
+
+        {% for area_section in report.area_observations %}
+        <div class="area-section">
+            <div class="area-header">{{ area_section.title }}</div>
+            <div class="area-content">
+                {{ area_section.content }}
+
+                {% if area_section.observations %}
+                <table class="obs-table">
+                    <thead>
+                        <tr>
+                            <th style="width:25%">Finding</th>
+                            <th style="width:10%">Severity</th>
+                            <th style="width:10%">Confidence</th>
+                            <th style="width:25%">Recommendation</th>
+                            <th style="width:15%">Sources</th>
+                            <th style="width:15%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for obs in area_section.observations %}
+                        <tr>
+                            <td>{{ obs.observation[:150] }}{% if obs.observation|length > 150 %}...{% endif %}</td>
+                            <td>
+                                {% set sev_class = obs.severity|lower|replace(' ', '-') if obs.severity else 'not-available' %}
+                                <span class="severity-badge severity-{{ sev_class }}">
+                                    {{ obs.severity or 'N/A' }}
+                                </span>
+                            </td>
+                            <td>{{ "%.0f"|format(obs.confidence_score * 100) }}%</td>
+                            <td>{{ obs.recommendation[:120] }}{% if obs.recommendation|length > 120 %}...{% endif %}</td>
+                            <td>{{ obs.sources|join(', ') if obs.sources else 'N/A' }}</td>
+                            <td>
+                                {% if obs.is_corroborated %}
+                                <span class="corroborated">✓ Corroborated</span>
+                                {% else %}
+                                <span style="font-size:8pt;color:#6B7280">Single Source</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if area_section.images %}
+                <div class="area-images">
+                    {% for img in area_section.images %}
+                    <div>
+                        {% if img.base64 %}
+                        <img src="{{ img.base64 }}" alt="Image from page {{ img.page }}">
+                        {% endif %}
+                        <div class="image-caption">Page {{ img.page }} ({{ img.width }}×{{ img.height }})</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ═══ 3. ROOT CAUSES ═══ -->
+    <div class="section">
+        <h2 class="section-title">3. Probable Root Cause</h2>
+        <div class="section-content">{{ report.root_causes }}</div>
+    </div>
+
+    <!-- ═══ 4. SEVERITY ASSESSMENT ═══ -->
+    <div class="section">
+        <h2 class="section-title">4. Severity Assessment</h2>
+        <div class="section-content">{{ report.severity_assessment }}</div>
+    </div>
+
+    <!-- ═══ 5. RECOMMENDED ACTIONS ═══ -->
+    <div class="section">
+        <h2 class="section-title">5. Recommended Actions</h2>
+        <div class="section-content">{{ report.recommended_actions }}</div>
+    </div>
+
+    <!-- ═══ 6. ADDITIONAL NOTES ═══ -->
+    <div class="section">
+        <h2 class="section-title">6. Additional Notes</h2>
+        <div class="section-content">{{ report.additional_notes }}</div>
+    </div>
+
+    <!-- ═══ 7. MISSING INFO ═══ -->
+    <div class="section">
+        <h2 class="section-title">7. Missing or Unclear Information</h2>
+        <div class="section-content">{{ report.missing_info }}</div>
+    </div>
+
+    <!-- ═══ CONFLICTS ═══ -->
+    {% if report.conflicts %}
+    <div class="section">
+        <h2 class="section-title">⚠ Detected Conflicts</h2>
+        {% for conflict in report.conflicts %}
+        <div class="conflict-card">
+            <div class="conflict-title">{{ conflict.area }} — {{ conflict.conflict_type|title }}</div>
+            <p><strong>Description:</strong> {{ conflict.description }}</p>
+            <p><strong>Resolution:</strong> {{ conflict.resolution_suggestion }}</p>
+            {% if conflict.severity_impact %}
+            <p><strong>Impact:</strong> {{ conflict.severity_impact }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="report-footer">
+        <p>Generated by {{ company_name }} | {{ report.generated_date }}</p>
+        <p>This report is AI-generated. All findings should be verified by a qualified professional.</p>
+    </footer>
+
+</body>
+</html>
