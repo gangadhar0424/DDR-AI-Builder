@@ -29,11 +29,30 @@ from parser.image_extractor import ExtractedImage
 
 
 @dataclass
+class Introduction:
+    background: str = "Not Available"
+    objective: str = "Not Available"
+    scope: str = "Not Available"
+    tools_used: str = "Not Available"
+
+@dataclass
+class GeneralInfo:
+    client_details: str = "Not Available"
+    location: str = "Not Available"
+    structure_type: str = "Not Available"
+    age_of_building: str = "Not Available"
+    floors: str = "Not Available"
+    previous_repairs: str = "Not Available"
+
+@dataclass
 class DDRSection:
     """A single section of the DDR report."""
-
     title: str
     content: str
+    thermal_findings: str = "Not Available"
+    combined_interpretation: str = "Not Available"
+    negative_inputs: list[str] = field(default_factory=list)
+    positive_inputs: list[str] = field(default_factory=list)
     observations: list[dict] = field(default_factory=list)
     images: list[dict] = field(default_factory=list)
 
@@ -41,14 +60,17 @@ class DDRSection:
 @dataclass
 class DDRReport:
     """Complete Detailed Diagnostic Report."""
-
     title: str
     generated_date: str
-    property_summary: str
+    introduction: Introduction = field(default_factory=Introduction)
+    general_info: GeneralInfo = field(default_factory=GeneralInfo)
     area_observations: list[DDRSection] = field(default_factory=list)
     root_causes: str = ""
     severity_assessment: str = ""
     recommended_actions: str = ""
+    summary_table: list[dict] = field(default_factory=list)
+    thermal_image_refs: list[dict] = field(default_factory=list)
+    visual_image_refs: list[dict] = field(default_factory=list)
     additional_notes: str = ""
     missing_info: str = ""
     conflicts: list[dict] = field(default_factory=list)
@@ -67,22 +89,36 @@ RULES:
 - When severity is assessed, provide clear reasoning.
 """
 
-PROPERTY_SUMMARY_PROMPT = """Based on the following merged observations from inspection and thermal reports,
-write a concise Property Issue Summary (2-3 paragraphs).
+INTRO_INFO_PROMPT = """Based on the following observations, extract the Introduction details.
+If any field cannot be inferred, write "Not Available".
 
-Total observations: {total_obs}
-Corroborated (found in both reports): {corroborated}
-Areas affected: {areas}
+OBSERVATIONS:
+{observations_text}
 
-Key findings by severity:
-{severity_summary}
+Return a JSON object with these exact keys:
+{{
+  "background": "<background of inspection>",
+  "objective": "<objective of assessment>",
+  "scope": "<scope of work>",
+  "tools_used": "<tools used>"
+}}
+"""
 
-Write a professional executive summary covering:
-1. Overall property condition assessment
-2. Number and nature of issues found
-3. Critical items requiring immediate attention
+GENERAL_INFO_PROMPT = """Based on the following observations, extract the General Information details.
+If any field cannot be inferred, write "Not Available".
 
-Return ONLY the summary text, no JSON.
+OBSERVATIONS:
+{observations_text}
+
+Return a JSON object with these exact keys:
+{{
+  "client_details": "<client details>",
+  "location": "<location>",
+  "structure_type": "<structure type>",
+  "age_of_building": "<age of building>",
+  "floors": "<floors>",
+  "previous_repairs": "<previous repairs>"
+}}
 """
 
 ROOT_CAUSE_PROMPT = """Based on the following observations, identify probable root causes.
@@ -133,6 +169,21 @@ For each action:
 Write in professional report format. Return ONLY the recommendations text.
 """
 
+SUMMARY_TABLE_PROMPT = """Based on the following observations, create a summary table of the issues.
+
+OBSERVATIONS:
+{observations_text}
+
+Return a JSON array of objects. Each object must have these exact keys:
+{{
+  "issue": "<concise description of issue>",
+  "affected_area": "<area affected>",
+  "cause": "<probable cause>",
+  "severity": "<Critical|High|Medium|Low|Informational>",
+  "recommended_action": "<concise recommended action>"
+}}
+"""
+
 AREA_ANALYSIS_PROMPT = """Write a detailed diagnostic analysis for the following area.
 
 AREA: {area}
@@ -140,13 +191,14 @@ AREA: {area}
 OBSERVATIONS:
 {observations_text}
 
-Write a professional analysis covering:
-1. Current condition summary
-2. Specific findings (reference source documents and pages)
-3. Thermal data interpretation (if available)
-4. Significance of findings
-
-Keep it factual and traceable. Return ONLY the analysis text.
+Return a JSON object with these exact keys:
+{{
+  "content": "<Current condition summary and specific visual findings>",
+  "thermal_findings": "<Supporting thermal findings interpretation>",
+  "combined_interpretation": "<Combined interpretation of visual and thermal data>",
+  "negative_inputs": ["<issue observed 1>", "<issue observed 2>"],
+  "positive_inputs": ["<source of issue 1>", "<source of issue 2>"]
+}}
 """
 
 
@@ -190,7 +242,6 @@ class DDRGenerator:
         report = DDRReport(
             title=report_title or config.DEFAULT_REPORT_TITLE,
             generated_date=datetime.now().strftime("%B %d, %Y at %I:%M %p"),
-            property_summary="",
             metadata={
                 "total_observations": merge_result.total_merged,
                 "corroborated": merge_result.corroborated_count,
@@ -202,11 +253,9 @@ class DDRGenerator:
             },
         )
 
-        # 1. Property Summary
-        logger.info("Generating property summary...")
-        report.property_summary = self._generate_property_summary(
-            merge_result
-        )
+        # 1. Intro and General Info
+        logger.info("Generating introduction and general info...")
+        report.introduction, report.general_info = self._generate_intro_and_general_info(observations)
 
         # 2. Area-wise Observations
         logger.info("Generating area-wise observations...")
@@ -228,6 +277,16 @@ class DDRGenerator:
         logger.info("Generating recommended actions...")
         report.recommended_actions = self._generate_actions(observations)
 
+        # Summary Table
+        logger.info("Generating summary table...")
+        report.summary_table = self._generate_summary_table(observations)
+
+        # Image References
+        logger.info("Processing image references...")
+        thermal_refs, visual_refs = self._process_image_references(images)
+        report.thermal_image_refs = thermal_refs
+        report.visual_image_refs = visual_refs
+
         # 6. Additional Notes
         report.additional_notes = self._generate_additional_notes(
             conflict_report, merge_result
@@ -243,39 +302,79 @@ class DDRGenerator:
         logger.info("DDR report generation complete")
         return report
 
-    def _generate_property_summary(self, merge_result: MergeResult) -> str:
-        """Generate the executive property summary."""
-        obs = merge_result.merged_observations
-
-        # Build severity summary
-        severity_counts = {}
-        for o in obs:
-            sev = o.severity.lower() if o.severity else "unrated"
-            severity_counts[sev] = severity_counts.get(sev, 0) + 1
-
-        severity_lines = []
-        for sev in ["critical", "high", "medium", "low", "informational", "unrated"]:
-            count = severity_counts.get(sev, 0)
-            if count > 0:
-                severity_lines.append(f"  - {sev.title()}: {count} observations")
-
-        prompt = PROPERTY_SUMMARY_PROMPT.format(
-            total_obs=merge_result.total_merged,
-            corroborated=merge_result.corroborated_count,
-            areas=", ".join(merge_result.areas[:20]),
-            severity_summary="\n".join(severity_lines),
-        )
+    def _generate_intro_and_general_info(self, observations: list[MergedObservation]) -> tuple[Introduction, GeneralInfo]:
+        """Generate introduction and general information from observations."""
+        obs_text = self._format_observations(observations[:30])
+        intro = Introduction()
+        gen_info = GeneralInfo()
 
         try:
-            return call_llm(prompt, system_prompt=DDR_SYNTHESIS_SYSTEM)
+            intro_json = call_llm_json(INTRO_INFO_PROMPT.format(observations_text=obs_text), system_prompt=DDR_SYNTHESIS_SYSTEM)
+            if isinstance(intro_json, dict):
+                intro.background = intro_json.get("background", "Not Available")
+                intro.objective = intro_json.get("objective", "Not Available")
+                intro.scope = intro_json.get("scope", "Not Available")
+                intro.tools_used = intro_json.get("tools_used", "Not Available")
         except Exception as e:
-            logger.error(f"Failed to generate property summary: {e}")
-            return (
-                f"This report covers {merge_result.total_merged} observations "
-                f"across {len(merge_result.areas)} areas. "
-                f"{merge_result.corroborated_count} findings were corroborated "
-                f"by both inspection and thermal reports."
-            )
+            logger.error(f"Failed to generate intro info: {e}")
+
+        try:
+            gen_json = call_llm_json(GENERAL_INFO_PROMPT.format(observations_text=obs_text), system_prompt=DDR_SYNTHESIS_SYSTEM)
+            if isinstance(gen_json, dict):
+                gen_info.client_details = gen_json.get("client_details", "Not Available")
+                gen_info.location = gen_json.get("location", "Not Available")
+                gen_info.structure_type = gen_json.get("structure_type", "Not Available")
+                gen_info.age_of_building = gen_json.get("age_of_building", "Not Available")
+                gen_info.floors = gen_json.get("floors", "Not Available")
+                gen_info.previous_repairs = gen_json.get("previous_repairs", "Not Available")
+        except Exception as e:
+            logger.error(f"Failed to generate general info: {e}")
+            
+        return intro, gen_info
+
+    def _generate_summary_table(self, observations: list[MergedObservation]) -> list[dict]:
+        """Generate the summary table."""
+        obs_text = self._format_observations(observations[:40])
+        prompt = SUMMARY_TABLE_PROMPT.format(observations_text=obs_text)
+        
+        try:
+            res = call_llm_json(prompt, system_prompt=DDR_SYNTHESIS_SYSTEM)
+            if isinstance(res, list):
+                return res
+            return []
+        except Exception as e:
+            logger.error(f"Failed to generate summary table: {e}")
+            return []
+
+    def _process_image_references(self, images: list[ExtractedImage] | None) -> tuple[list[dict], list[dict]]:
+        """Process and split images into thermal and visual lists."""
+        if not images:
+            return [], []
+            
+        thermal_refs = []
+        visual_refs = []
+        
+        for idx, img in enumerate(images):
+            # If the original PDF was thermal or context suggests thermal
+            is_thermal = False
+            if "thermal" in str(img.image_path).lower():
+                is_thermal = True
+            elif img.nearby_text and any(k in img.nearby_text.lower() for k in ["ir", "thermal", "temperature", "flir", "infrared"]):
+                is_thermal = True
+                
+            img_data = {
+                "description": f"Image from page {img.page_number}",
+                "base64": self._image_to_base64(img.image_path),
+                "page": img.page_number,
+                "source": "Report"
+            }
+            
+            if is_thermal:
+                thermal_refs.append(img_data)
+            else:
+                visual_refs.append(img_data)
+                
+        return thermal_refs[:10], visual_refs[:10]  # limit to top 10 each to avoid massive outputs
 
     def _generate_area_sections(
         self,
@@ -295,22 +394,33 @@ class DDRGenerator:
             obs_text = self._format_observations(area_obs)
 
             # Generate analysis via LLM
+            content, thermal, interpretation, neg, pos = "Not Available", "Not Available", "Not Available", [], []
             try:
                 prompt = AREA_ANALYSIS_PROMPT.format(
                     area=area,
                     observations_text=obs_text,
                 )
-                analysis = call_llm(prompt, system_prompt=DDR_SYNTHESIS_SYSTEM)
+                analysis_json = call_llm_json(prompt, system_prompt=DDR_SYNTHESIS_SYSTEM)
+                if isinstance(analysis_json, dict):
+                    content = analysis_json.get("content", "Not Available")
+                    thermal = analysis_json.get("thermal_findings", "Not Available")
+                    interpretation = analysis_json.get("combined_interpretation", "Not Available")
+                    neg = analysis_json.get("negative_inputs", [])
+                    pos = analysis_json.get("positive_inputs", [])
             except Exception as e:
                 logger.error(f"Failed area analysis for '{area}': {e}")
-                analysis = obs_text
+                content = obs_text
 
             # Map images to this area
             area_images = self._map_images_to_area(area, area_obs, images)
 
             section = DDRSection(
                 title=area,
-                content=analysis,
+                content=content,
+                thermal_findings=thermal,
+                combined_interpretation=interpretation,
+                negative_inputs=neg,
+                positive_inputs=pos,
                 observations=[o.to_dict() for o in area_obs],
                 images=area_images,
             )
@@ -607,10 +717,11 @@ class DDRGenerator:
         """
         try:
             from weasyprint import HTML
-        except ImportError:
+        except (ImportError, OSError, Exception) as e:
             logger.warning(
-                "WeasyPrint not installed. Skipping PDF export. "
-                "Install with: pip install weasyprint"
+                f"WeasyPrint dependency missing or failed to load. Skipping PDF export. "
+                f"Error: {e}\n"
+                f"(On Windows, you need GTK3 installed for PDF export)"
             )
             return ""
 
@@ -670,7 +781,6 @@ class DDRGenerator:
                 "inspection_count": "Inspection Observations",
                 "thermal_count": "Thermal Observations",
                 "areas_count": "Areas Assessed",
-                "conflicts_count": "Conflicts Detected",
                 "completeness": "Data Completeness",
             }
             for key, label in labels.items():
@@ -678,16 +788,47 @@ class DDRGenerator:
                     lines.append(f"| {label} | {report.metadata[key]} |")
             lines.append("")
 
-        # Property Summary
-        lines.append("\n## 1. Property Issue Summary\n")
-        lines.append(report.property_summary)
+        # 1. Introduction
+        lines.append("\n## 1. Introduction\n")
+        lines.append(f"**Background of Inspection:** {report.introduction.background}")
+        lines.append(f"**Objective of Assessment:** {report.introduction.objective}")
+        lines.append(f"**Scope of Work:** {report.introduction.scope}")
+        lines.append(f"**Tools Used:** {report.introduction.tools_used}")
         lines.append("")
 
-        # Area Observations
-        lines.append("\n## 2. Area-wise Diagnostic Observations\n")
-        for section in report.area_observations:
-            lines.append(f"\n### 📍 {section.title}\n")
-            lines.append(section.content)
+        # 2. General Information
+        lines.append("\n## 2. General Information\n")
+        lines.append(f"- **Client Details:** {report.general_info.client_details}")
+        lines.append(f"- **Location:** {report.general_info.location}")
+        lines.append(f"- **Structure Type:** {report.general_info.structure_type}")
+        lines.append(f"- **Age of Building:** {report.general_info.age_of_building}")
+        lines.append(f"- **Floors:** {report.general_info.floors}")
+        lines.append(f"- **Previous Repairs:** {report.general_info.previous_repairs}")
+        lines.append("")
+
+        # 3. Area Observations
+        lines.append("\n## 3. Visual Observations and Readings\n")
+        for idx, section in enumerate(report.area_observations, 1):
+            lines.append(f"\n### 3.{idx} {section.title}\n")
+            
+            lines.append("**A. Observations**")
+            lines.append(section.content + "\n")
+            
+            lines.append("**B. Supporting Thermal Findings**")
+            lines.append(section.thermal_findings + "\n")
+            
+            lines.append("**C. Combined Interpretation**")
+            lines.append(section.combined_interpretation + "\n")
+            
+            lines.append("**Negative Side Inputs (Issues Observed):**")
+            for item in section.negative_inputs:
+                lines.append(f"- {item}")
+            lines.append("")
+            
+            lines.append("**Positive Side Inputs (Source of Issue):**")
+            for item in section.positive_inputs:
+                lines.append(f"- {item}")
+            lines.append("")
 
             if section.observations:
                 lines.append("\n#### Detailed Findings\n")
@@ -737,25 +878,40 @@ class DDRGenerator:
                         )
             lines.append("")
 
-        # Root Causes
-        lines.append("\n## 3. Probable Root Cause Analysis\n")
-        lines.append(report.root_causes)
+        # 4. Analysis and Suggestions
+        lines.append("\n## 4. Analysis & Suggestions\n")
+        lines.append(f"### 4.1 Probable Root Cause\n{report.root_causes}\n")
+        lines.append(f"### 4.2 Severity Assessment\n{report.severity_assessment}\n")
+        lines.append(f"### 4.3 Recommended Actions\n{report.recommended_actions}\n")
+        
+        lines.append("### 4.4 Summary Table\n")
+        if report.summary_table:
+            lines.append("| Issue | Affected Area | Cause | Severity | Recommended Action |")
+            lines.append("|-------|---------------|-------|----------|--------------------|")
+            for row in report.summary_table:
+                lines.append(f"| {row.get('issue','')} | {row.get('affected_area','')} | {row.get('cause','')} | {row.get('severity','')} | {row.get('recommended_action','')} |")
+        lines.append("")
 
-        # Severity Assessment
-        lines.append("\n\n## 4. Severity Assessment\n")
-        lines.append(report.severity_assessment)
+        # 5. Image References
+        lines.append("\n## 5. Image References\n")
+        lines.append("### Thermal References\n")
+        for i, img in enumerate(report.thermal_image_refs, 1):
+            lines.append(f"**IMAGE {i}: {img.get('description','')}** (Page {img.get('page','')})")
+        lines.append("\n### Visual References\n")
+        for i, img in enumerate(report.visual_image_refs, 1):
+            lines.append(f"**IMAGE {i}: {img.get('description','')}** (Page {img.get('page','')})")
 
-        # Recommended Actions
-        lines.append("\n\n## 5. Recommended Actions\n")
-        lines.append(report.recommended_actions)
-
-        # Additional Notes
+        # 6. Additional Notes
         lines.append("\n\n## 6. Additional Notes\n")
         lines.append(report.additional_notes)
 
-        # Missing Info
+        # 7. Missing Info
         lines.append("\n\n## 7. Missing or Unclear Information\n")
         lines.append(report.missing_info)
+
+        # 8. Limitations & Disclaimer
+        lines.append("\n\n## 8. Limitations and Disclaimer\n")
+        lines.append("- This inspection is visual and non-exhaustive.\n- Hidden defects may not be detected.\n- Recommend expert consultation for critical issues.")
 
         # Conflicts
         if report.conflicts:

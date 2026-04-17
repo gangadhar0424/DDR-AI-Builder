@@ -21,29 +21,36 @@ class Observation:
 
     area: str
     observation: str
+    type: str = ""
     severity_hint: str = ""
     recommendation_hint: str = ""
     source: str = ""
     page: str = ""
     confidence: float = 0.0
-    raw_text_snippet: str = ""
+    evidence: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
 
 
-SYSTEM_PROMPT = """You are an expert building inspector and report analyst.
-Your task is to extract structured observations from inspection report text.
+SYSTEM_PROMPT = """You are an expert building inspection data extractor.
 
-RULES:
-- Extract EVERY distinct observation, defect, issue, or finding mentioned.
-- Each observation must be specific and actionable — not vague summaries.
-- Preserve the exact terminology used in the report.
-- If severity is mentioned or implied, capture it in severity_hint.
-- If a recommendation or action is mentioned, capture it in recommendation_hint.
-- Set area to the specific location/component (e.g., "Roof - North Slope", "Bathroom 2 - Shower").
-- NEVER invent or assume information not present in the text.
-- If a field cannot be determined, set it to an empty string.
+Your task is to extract ONLY structured observations from the given report text.
+
+IMPORTANT RULES:
+- DO NOT summarize
+- DO NOT skip details
+- DO NOT hallucinate
+- Extract ALL issues clearly
+- If no observation exists, return empty list []
+- Focus ONLY on defects, damages, moisture, cracks, leaks, thermal anomalies
+
+EXTRACTION RULES:
+1. Identify AREA explicitly
+2. Extract ONLY real issues (ignore generic text)
+3. If same issue repeated → keep only once
+4. If unclear → still extract but mark severity as "unknown"
+5. Preserve original meaning — do NOT rewrite aggressively
 """
 
 EXTRACTION_PROMPT = """Analyze the following inspection report text and extract ALL observations.
@@ -51,21 +58,28 @@ EXTRACTION_PROMPT = """Analyze the following inspection report text and extract 
 SOURCE DOCUMENT: {source_name}
 PAGE RANGE: {page_range}
 
---- BEGIN TEXT ---
+--------------------------------------------------
+INPUT TEXT:
 {text}
---- END TEXT ---
+--------------------------------------------------
 
-Return a JSON array of observation objects. Each object must have these fields:
-{{
-  "area": "<specific location or component>",
-  "observation": "<what was found — be precise>",
-  "severity_hint": "<critical|high|medium|low|informational or empty>",
-  "recommendation_hint": "<suggested action if mentioned, else empty>",
-  "source": "{source_name}",
-  "page": "<page number(s) where this was found>"
-}}
+OUTPUT FORMAT (STRICT JSON ONLY):
 
-Return ONLY the JSON array. Do not include any other text.
+[
+  {{
+    "area": "Bathroom / Bedroom / Wall / Terrace / etc",
+    "observation": "Exact issue observed",
+    "type": "moisture | crack | leakage | thermal anomaly | other",
+    "severity_hint": "low | medium | high | unknown",
+    "source": "{source_name}",
+    "page": "<page number(s)>",
+    "evidence": "short supporting text snippet"
+  }}
+]
+
+RETURN ONLY VALID JSON
+NO explanation
+NO extra text
 """
 
 
@@ -201,11 +215,13 @@ class ObservationExtractor:
             obs = Observation(
                 area=raw.get("area", "").strip(),
                 observation=raw.get("observation", "").strip(),
+                type=raw.get("type", "").strip(),
                 severity_hint=raw.get("severity_hint", "").strip().lower(),
                 recommendation_hint=raw.get("recommendation_hint", "").strip(),
                 source=raw.get("source", source_name).strip(),
                 page=str(raw.get("page", "")).strip(),
                 confidence=float(raw.get("confidence", 0.85)),
+                evidence=raw.get("evidence", "").strip(),
             )
             # Only keep observations with meaningful content
             if obs.area and obs.observation:

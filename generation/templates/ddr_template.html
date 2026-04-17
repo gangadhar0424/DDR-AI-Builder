@@ -15,7 +15,7 @@
             --bg: #ffffff;
             --text: #1a202c;
             --text-secondary: #4a5568;
-            --border: #e2e8f0;
+            --border: #cbd5e0;
             --section-bg: #f7fafc;
             --critical: #DC2626;
             --high: #EA580C;
@@ -24,50 +24,75 @@
             --info: #2563EB;
         }
 
-        body {
-            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.6;
-            color: var(--text);
-            background: var(--bg);
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 50px;
+        @page {
+            size: A4;
+            margin: 20mm 18mm 25mm 18mm;
         }
 
-        /* ─── Header ─── */
-        .report-header {
-            border-bottom: 4px solid var(--primary);
-            padding-bottom: 24px;
-            margin-bottom: 32px;
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.65;
+            color: var(--text);
+            background: var(--bg);
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 30px 40px;
         }
-        .report-header h1 {
-            font-size: 26pt;
-            color: var(--primary);
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
-        }
-        .report-meta {
+
+        h1 { font-size: 26pt; color: var(--primary); font-weight: 700; margin-bottom: 8px; }
+        h2 { font-size: 15pt; color: var(--primary); font-weight: 700; margin-bottom: 14px; border-left: 4px solid var(--primary-light); padding-left: 12px; }
+        h3 { font-size: 12pt; color: var(--primary-light); font-weight: 600; margin-bottom: 10px; margin-top: 18px; }
+        h4 { font-size: 10.5pt; color: var(--text); font-weight: 600; margin-bottom: 6px; margin-top: 12px; }
+
+        p { margin-bottom: 8px; }
+        ul { margin: 6px 0 10px 20px; }
+        li { margin-bottom: 4px; }
+
+        /* ─── Cover Page ─── */
+        .cover-page {
+            text-align: center;
+            padding: 80px 40px 60px;
+            page-break-after: always;
+            min-height: 85vh;
             display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            font-size: 9.5pt;
-            color: var(--text-secondary);
-            margin-top: 12px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        .report-meta span {
-            background: var(--section-bg);
-            padding: 4px 12px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-        }
-        .company-badge {
-            font-size: 9pt;
+        .cover-page .company-badge {
+            font-size: 10pt;
             color: var(--primary-light);
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        .cover-page h1 {
+            font-size: 32pt;
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 16px;
+            margin-bottom: 40px;
+        }
+        .cover-details {
+            text-align: left;
+            display: inline-block;
+            margin-top: 30px;
+            min-width: 340px;
+        }
+        .cover-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .cover-details td {
+            padding: 8px 14px;
+            font-size: 11pt;
+            border-bottom: 1px solid var(--accent);
+        }
+        .cover-details td:first-child {
+            font-weight: 700;
+            color: var(--primary);
+            width: 45%;
         }
 
         /* ─── Sections ─── */
@@ -75,67 +100,84 @@
             margin-bottom: 28px;
             page-break-inside: avoid;
         }
-        .section-title {
-            font-size: 16pt;
-            font-weight: 700;
-            color: var(--primary);
-            border-left: 4px solid var(--primary-light);
-            padding-left: 14px;
-            margin-bottom: 16px;
-        }
         .section-content {
-            padding: 16px 20px;
+            padding: 14px 18px;
             background: var(--section-bg);
             border-radius: 6px;
             border: 1px solid var(--border);
-            white-space: pre-wrap;
             font-size: 10.5pt;
             line-height: 1.7;
+            white-space: pre-wrap;
         }
 
-        /* ─── Area Sections ─── */
-        .area-section {
+        /* ─── Tables ─── */
+        table.info-table, table.summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+        table.info-table th, table.summary-table th {
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        table.info-table td, table.summary-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        table.info-table tr:nth-child(even),
+        table.summary-table tr:nth-child(even) {
+            background: var(--section-bg);
+        }
+        table.info-table td:first-child {
+            font-weight: 600;
+            width: 30%;
+            color: var(--primary);
+        }
+
+        /* ─── Area Observation Blocks ─── */
+        .area-block {
             margin-bottom: 24px;
             border: 1px solid var(--border);
             border-radius: 8px;
             overflow: hidden;
             page-break-inside: avoid;
         }
-        .area-header {
+        .area-block-header {
             background: var(--primary);
-            color: white;
-            padding: 12px 20px;
-            font-size: 13pt;
+            color: #fff;
+            padding: 10px 18px;
+            font-size: 12pt;
             font-weight: 600;
         }
-        .area-content {
-            padding: 16px 20px;
-            white-space: pre-wrap;
-            font-size: 10.5pt;
-            line-height: 1.7;
+        .area-block-body {
+            padding: 16px 18px;
         }
-
-        /* ─── Observations Table ─── */
-        .obs-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-            font-size: 9.5pt;
+        .subsection-label {
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-top: 10px;
+            margin-bottom: 4px;
+            font-size: 10pt;
         }
-        .obs-table th {
-            background: var(--primary);
-            color: white;
-            padding: 8px 12px;
-            text-align: left;
-            font-weight: 600;
+        .side-input-box {
+            background: #f0f4f8;
+            border-left: 3px solid var(--primary-light);
+            padding: 10px 14px;
+            margin: 8px 0 12px;
+            border-radius: 0 4px 4px 0;
         }
-        .obs-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
+        .side-input-box.negative {
+            border-left-color: var(--critical);
+            background: #fef2f2;
         }
-        .obs-table tr:nth-child(even) {
-            background: var(--section-bg);
+        .side-input-box.positive {
+            border-left-color: var(--low);
+            background: #f0fdf4;
         }
 
         /* ─── Severity Badges ─── */
@@ -147,7 +189,7 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: white;
+            color: #fff;
         }
         .severity-critical { background: var(--critical); }
         .severity-high { background: var(--high); }
@@ -156,159 +198,283 @@
         .severity-informational { background: var(--info); }
         .severity-not-available { background: #9CA3AF; }
 
-        /* ─── Corroboration Badge ─── */
-        .corroborated {
+        .corroborated-badge {
             display: inline-block;
             padding: 1px 8px;
             border-radius: 10px;
             font-size: 8pt;
             font-weight: 600;
             background: #047857;
-            color: white;
+            color: #fff;
         }
 
         /* ─── Images ─── */
-        .area-images {
+        .image-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 1px dashed var(--border);
+            gap: 14px;
+            margin: 12px 0;
         }
-        .area-images img {
+        .image-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            max-width: 300px;
+        }
+        .image-card img {
             max-width: 280px;
             max-height: 200px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
             object-fit: contain;
+            border-radius: 4px;
         }
         .image-caption {
-            font-size: 8pt;
+            font-size: 8.5pt;
             color: var(--text-secondary);
-            text-align: center;
             margin-top: 4px;
+        }
+        .image-placeholder {
+            background: #f1f5f9;
+            border: 2px dashed var(--border);
+            border-radius: 6px;
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin: 8px 0;
         }
 
         /* ─── Conflicts ─── */
         .conflict-card {
             border-left: 4px solid var(--critical);
-            background: #FEF2F2;
+            background: #fef2f2;
             padding: 12px 16px;
             margin-bottom: 12px;
             border-radius: 0 6px 6px 0;
         }
-        .conflict-title {
-            font-weight: 700;
-            color: var(--critical);
-            margin-bottom: 6px;
+
+        /* ─── Disclaimer ─── */
+        .disclaimer-box {
+            background: #fffbeb;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 16px 20px;
+            font-size: 9.5pt;
+            color: #92400e;
         }
 
         /* ─── Stats Grid ─── */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
         }
         .stat-card {
             background: var(--section-bg);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 14px 16px;
+            padding: 12px 14px;
             text-align: center;
         }
         .stat-value {
-            font-size: 22pt;
+            font-size: 20pt;
             font-weight: 700;
             color: var(--primary);
         }
         .stat-label {
-            font-size: 8.5pt;
+            font-size: 8pt;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-top: 2px;
         }
 
         /* ─── Footer ─── */
         .report-footer {
             margin-top: 40px;
-            padding-top: 16px;
+            padding-top: 14px;
             border-top: 2px solid var(--primary);
             font-size: 8.5pt;
             color: var(--text-secondary);
             text-align: center;
         }
 
-        /* ─── Print Styles ─── */
+        /* ─── Download Button (screen only) ─── */
+        .download-btn {
+            display: block;
+            width: 260px;
+            margin: 0 auto 30px;
+            padding: 14px 20px;
+            background: var(--primary);
+            color: #fff;
+            text-align: center;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .download-btn:hover { background: var(--primary-light); }
+
+        /* ─── Print / PDF ─── */
         @media print {
-            body { padding: 20px 30px; }
-            .area-section { page-break-inside: avoid; }
+            body { padding: 0; max-width: none; }
+            .no-print { display: none !important; }
+            .cover-page { min-height: auto; padding: 60px 20px 40px; }
+            .area-block { page-break-inside: avoid; }
             .section { page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ═══ HEADER ═══ -->
-    <header class="report-header">
+    <div class="no-print">
+        <button class="download-btn" onclick="window.print()">📥 Download PDF Report</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- 1. COVER PAGE                          -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="cover-page">
         <div class="company-badge">{{ company_name }}</div>
         <h1>{{ report.title }}</h1>
-        <div class="report-meta">
-            <span>📅 {{ report.generated_date }}</span>
-            <span>📊 {{ report.metadata.total_observations }} Observations</span>
-            <span>🏠 {{ report.metadata.areas_count }} Areas</span>
-            <span>✅ {{ report.metadata.completeness }} Complete</span>
-        </div>
-    </header>
-
-    <!-- ═══ STATS ═══ -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-value">{{ report.metadata.total_observations }}</div>
-            <div class="stat-label">Total Findings</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ report.metadata.corroborated }}</div>
-            <div class="stat-label">Corroborated</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ report.metadata.inspection_count }}</div>
-            <div class="stat-label">Inspection Obs</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ report.metadata.thermal_count }}</div>
-            <div class="stat-label">Thermal Obs</div>
+        <div class="cover-details">
+            <table>
+                <tr><td>Inspection Date</td><td>{{ report.generated_date }}</td></tr>
+                <tr><td>Prepared By</td><td>{{ report.metadata.get('prepared_by', 'Not Available') }}</td></tr>
+                <tr><td>Prepared For</td><td>{{ report.metadata.get('prepared_for', 'Not Available') }}</td></tr>
+                <tr><td>Property Details</td><td>{{ report.metadata.get('property_details', 'Not Available') }}</td></tr>
+                <tr><td>Total Observations</td><td>{{ report.metadata.total_observations }}</td></tr>
+                <tr><td>Areas Assessed</td><td>{{ report.metadata.areas_count }}</td></tr>
+                <tr><td>Data Completeness</td><td>{{ report.metadata.completeness }}</td></tr>
+            </table>
         </div>
     </div>
 
-    <!-- ═══ 1. PROPERTY SUMMARY ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 1: INTRODUCTION                -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="section">
-        <h2 class="section-title">1. Property Issue Summary</h2>
-        <div class="section-content">{{ report.property_summary }}</div>
+        <h2>1. Introduction</h2>
+        <h3>1.1 Background of Inspection</h3>
+        <div class="section-content">{{ report.introduction.background if report.introduction else 'Not Available' }}</div>
+
+        <h3>1.2 Objective of Assessment</h3>
+        <div class="section-content">{{ report.introduction.objective if report.introduction else 'Not Available' }}</div>
+
+        <h3>1.3 Scope of Work</h3>
+        <div class="section-content">{{ report.introduction.scope if report.introduction else 'Not Available' }}</div>
+
+        <h3>1.4 Tools Used</h3>
+        <div class="section-content">{{ report.introduction.tools_used if report.introduction else 'Not Available' }}</div>
     </div>
 
-    <!-- ═══ 2. AREA-WISE OBSERVATIONS ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 2: GENERAL INFORMATION         -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="section">
-        <h2 class="section-title">2. Area-wise Observations</h2>
+        <h2>2. General Information</h2>
+        <table class="info-table">
+            <tr><td>Client Details</td><td>{{ report.general_info.client_details if report.general_info else 'Not Available' }}</td></tr>
+            <tr><td>Location</td><td>{{ report.general_info.location if report.general_info else 'Not Available' }}</td></tr>
+            <tr><td>Structure Type</td><td>{{ report.general_info.structure_type if report.general_info else 'Not Available' }}</td></tr>
+            <tr><td>Age of Building</td><td>{{ report.general_info.age_of_building if report.general_info else 'Not Available' }}</td></tr>
+            <tr><td>Floors</td><td>{{ report.general_info.floors if report.general_info else 'Not Available' }}</td></tr>
+            <tr><td>Previous Repairs</td><td>{{ report.general_info.previous_repairs if report.general_info else 'Not Available' }}</td></tr>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 3: VISUAL OBSERVATIONS         -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section">
+        <h2>3. Visual Observations and Readings</h2>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ report.metadata.total_observations }}</div>
+                <div class="stat-label">Total Findings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report.metadata.corroborated }}</div>
+                <div class="stat-label">Corroborated</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report.metadata.inspection_count }}</div>
+                <div class="stat-label">Inspection Obs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ report.metadata.thermal_count }}</div>
+                <div class="stat-label">Thermal Obs</div>
+            </div>
+        </div>
 
         {% for area_section in report.area_observations %}
-        <div class="area-section">
-            <div class="area-header">{{ area_section.title }}</div>
-            <div class="area-content">
-                {{ area_section.content }}
+        <div class="area-block">
+            <div class="area-block-header">3.{{ loop.index }} {{ area_section.title }}</div>
+            <div class="area-block-body">
 
+                <!-- A. Observations -->
+                <div class="subsection-label">A. Observations</div>
+                <div style="white-space: pre-wrap; margin-bottom: 10px;">{{ area_section.content }}</div>
+
+                <!-- B. Supporting Thermal Findings -->
+                <div class="subsection-label">B. Supporting Thermal Findings</div>
+                {% if area_section.thermal_findings %}
+                <div style="white-space: pre-wrap; margin-bottom: 10px;">{{ area_section.thermal_findings }}</div>
+                {% else %}
+                <p style="color: var(--text-secondary); font-style: italic;">Not Available</p>
+                {% endif %}
+
+                <!-- C. Combined Interpretation -->
+                <div class="subsection-label">C. Combined Interpretation</div>
+                {% if area_section.combined_interpretation %}
+                <div style="white-space: pre-wrap; margin-bottom: 10px;">{{ area_section.combined_interpretation }}</div>
+                {% else %}
+                <p style="color: var(--text-secondary); font-style: italic;">Not Available</p>
+                {% endif %}
+
+                <!-- Negative Side Inputs -->
+                <div class="side-input-box negative">
+                    <strong>Negative Side Inputs (Issues Observed):</strong>
+                    {% if area_section.negative_inputs %}
+                    <ul>
+                        {% for item in area_section.negative_inputs %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p style="font-style:italic;">Not Available</p>
+                    {% endif %}
+                </div>
+
+                <!-- Positive Side Inputs -->
+                <div class="side-input-box positive">
+                    <strong>Positive Side Inputs (Source of Issue):</strong>
+                    {% if area_section.positive_inputs %}
+                    <ul>
+                        {% for item in area_section.positive_inputs %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p style="font-style:italic;">Not Available</p>
+                    {% endif %}
+                </div>
+
+                <!-- Findings Table -->
                 {% if area_section.observations %}
-                <table class="obs-table">
+                <table class="summary-table" style="margin-top: 14px;">
                     <thead>
                         <tr>
-                            <th style="width:25%">Finding</th>
+                            <th style="width:30%">Finding</th>
                             <th style="width:10%">Severity</th>
-                            <th style="width:10%">Confidence</th>
+                            <th style="width:8%">Confidence</th>
                             <th style="width:25%">Recommendation</th>
-                            <th style="width:15%">Sources</th>
-                            <th style="width:15%">Status</th>
+                            <th style="width:14%">Sources</th>
+                            <th style="width:13%">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -317,16 +483,14 @@
                             <td>{{ obs.observation[:150] }}{% if obs.observation|length > 150 %}...{% endif %}</td>
                             <td>
                                 {% set sev_class = obs.severity|lower|replace(' ', '-') if obs.severity else 'not-available' %}
-                                <span class="severity-badge severity-{{ sev_class }}">
-                                    {{ obs.severity or 'N/A' }}
-                                </span>
+                                <span class="severity-badge severity-{{ sev_class }}">{{ obs.severity or 'N/A' }}</span>
                             </td>
                             <td>{{ "%.0f"|format(obs.confidence_score * 100) }}%</td>
                             <td>{{ obs.recommendation[:120] }}{% if obs.recommendation|length > 120 %}...{% endif %}</td>
                             <td>{{ obs.sources|join(', ') if obs.sources else 'N/A' }}</td>
                             <td>
                                 {% if obs.is_corroborated %}
-                                <span class="corroborated">✓ Corroborated</span>
+                                <span class="corroborated-badge">✓ Corroborated</span>
                                 {% else %}
                                 <span style="font-size:8pt;color:#6B7280">Single Source</span>
                                 {% endif %}
@@ -337,14 +501,17 @@
                 </table>
                 {% endif %}
 
+                <!-- Area Images -->
                 {% if area_section.images %}
-                <div class="area-images">
+                <div class="image-grid">
                     {% for img in area_section.images %}
-                    <div>
+                    <div class="image-card">
                         {% if img.base64 %}
                         <img src="{{ img.base64 }}" alt="Image from page {{ img.page }}">
+                        {% else %}
+                        <div class="image-placeholder">Image Not Available</div>
                         {% endif %}
-                        <div class="image-caption">Page {{ img.page }} ({{ img.width }}×{{ img.height }})</div>
+                        <div class="image-caption">Page {{ img.page }} | {{ img.width }}×{{ img.height }} | Confidence: {{ img.mapping_label }}</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -354,43 +521,135 @@
         {% endfor %}
     </div>
 
-    <!-- ═══ 3. ROOT CAUSES ═══ -->
-    <div class="section">
-        <h2 class="section-title">3. Probable Root Cause</h2>
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 4: ANALYSIS & SUGGESTIONS      -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section" style="page-break-before: always;">
+        <h2>4. Analysis &amp; Suggestions</h2>
+
+        <h3>4.1 Probable Root Cause</h3>
         <div class="section-content">{{ report.root_causes }}</div>
-    </div>
 
-    <!-- ═══ 4. SEVERITY ASSESSMENT ═══ -->
-    <div class="section">
-        <h2 class="section-title">4. Severity Assessment</h2>
+        <h3>4.2 Severity Assessment</h3>
         <div class="section-content">{{ report.severity_assessment }}</div>
-    </div>
 
-    <!-- ═══ 5. RECOMMENDED ACTIONS ═══ -->
-    <div class="section">
-        <h2 class="section-title">5. Recommended Actions</h2>
+        <h3>4.3 Recommended Actions</h3>
         <div class="section-content">{{ report.recommended_actions }}</div>
+
+        <h3>4.4 Summary Table</h3>
+        {% if report.summary_table %}
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Affected Area</th>
+                    <th>Cause</th>
+                    <th>Severity</th>
+                    <th>Recommended Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.summary_table %}
+                <tr>
+                    <td>{{ row.issue }}</td>
+                    <td>{{ row.affected_area }}</td>
+                    <td>{{ row.cause }}</td>
+                    <td>
+                        {% set sev_class = row.severity|lower|replace(' ', '-') if row.severity else 'not-available' %}
+                        <span class="severity-badge severity-{{ sev_class }}">{{ row.severity or 'N/A' }}</span>
+                    </td>
+                    <td>{{ row.recommended_action }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-secondary); font-style: italic;">Not Available</p>
+        {% endif %}
     </div>
 
-    <!-- ═══ 6. ADDITIONAL NOTES ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 5: IMAGE REFERENCES            -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section" style="page-break-before: always;">
+        <h2>5. Image References</h2>
+
+        <h3>5.1 Thermal References</h3>
+        {% if report.thermal_image_refs %}
+        {% for img_ref in report.thermal_image_refs %}
+        <h4>IMAGE {{ loop.index }}: {{ img_ref.description }}</h4>
+        {% if img_ref.base64 %}
+        <div class="image-card" style="display:inline-block; margin-bottom:12px;">
+            <img src="{{ img_ref.base64 }}" alt="{{ img_ref.description }}">
+            <div class="image-caption">Page {{ img_ref.page }} | {{ img_ref.source }}</div>
+        </div>
+        {% else %}
+        <div class="image-placeholder">Image Not Available</div>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <div class="image-placeholder">No thermal images available</div>
+        {% endif %}
+
+        <h3>5.2 Visual References</h3>
+        {% if report.visual_image_refs %}
+        {% for img_ref in report.visual_image_refs %}
+        <h4>IMAGE {{ loop.index }}: {{ img_ref.description }}</h4>
+        {% if img_ref.base64 %}
+        <div class="image-card" style="display:inline-block; margin-bottom:12px;">
+            <img src="{{ img_ref.base64 }}" alt="{{ img_ref.description }}">
+            <div class="image-caption">Page {{ img_ref.page }} | {{ img_ref.source }}</div>
+        </div>
+        {% else %}
+        <div class="image-placeholder">Image Not Available</div>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <div class="image-placeholder">No visual images available</div>
+        {% endif %}
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 6: ADDITIONAL NOTES            -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="section">
-        <h2 class="section-title">6. Additional Notes</h2>
+        <h2>6. Additional Notes</h2>
         <div class="section-content">{{ report.additional_notes }}</div>
     </div>
 
-    <!-- ═══ 7. MISSING INFO ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 7: MISSING / UNCLEAR INFO      -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="section">
-        <h2 class="section-title">7. Missing or Unclear Information</h2>
+        <h2>7. Missing or Unclear Information</h2>
         <div class="section-content">{{ report.missing_info }}</div>
     </div>
 
-    <!-- ═══ CONFLICTS ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SECTION 8: LIMITATIONS & DISCLAIMER    -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="section">
+        <h2>8. Limitations and Disclaimer</h2>
+        <div class="disclaimer-box">
+            <ul>
+                <li>This inspection is visual and non-exhaustive in nature. It is based solely on the data provided in the uploaded inspection and thermal reports.</li>
+                <li>Hidden or concealed defects (e.g., within walls, beneath flooring, or behind finishes) may not be detected by this assessment.</li>
+                <li>Expert consultation by a qualified structural engineer or specialist is strongly recommended for all critical issues identified in this report.</li>
+                <li>This report does not constitute a structural adequacy certificate and should not be treated as one.</li>
+                <li>All findings should be independently verified before commencing any remediation work.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- CONFLICTS (if any)                     -->
+    <!-- ═══════════════════════════════════════ -->
     {% if report.conflicts %}
     <div class="section">
-        <h2 class="section-title">⚠ Detected Conflicts</h2>
+        <h2>⚠ Detected Conflicts Between Reports</h2>
         {% for conflict in report.conflicts %}
         <div class="conflict-card">
-            <div class="conflict-title">{{ conflict.area }} — {{ conflict.conflict_type|title }}</div>
+            <p><strong>{{ conflict.area }} — {{ conflict.conflict_type|title }}</strong></p>
             <p><strong>Description:</strong> {{ conflict.description }}</p>
             <p><strong>Resolution:</strong> {{ conflict.resolution_suggestion }}</p>
             {% if conflict.severity_impact %}
@@ -401,10 +660,12 @@
     </div>
     {% endif %}
 
-    <!-- ═══ FOOTER ═══ -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- FOOTER                                 -->
+    <!-- ═══════════════════════════════════════ -->
     <footer class="report-footer">
         <p>Generated by {{ company_name }} | {{ report.generated_date }}</p>
-        <p>This report is AI-generated. All findings should be verified by a qualified professional.</p>
+        <p>This report is AI-generated from provided inspection and thermal data. All findings should be verified by a qualified professional.</p>
     </footer>
 
 </body>

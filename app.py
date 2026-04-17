@@ -27,7 +27,7 @@ st.set_page_config(
     page_title="DDR-AI-Builder",
     page_icon="🏗️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ═══════════════════════════════════════════════
@@ -158,7 +158,6 @@ st.markdown("""
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -211,7 +210,7 @@ with st.sidebar:
             type="password",
             help="Enter your Google Gemini API key",
         )
-        model = st.text_input("Model", value=config.GEMINI_MODEL)
+        model = st.text_input("Gemini Model", value=config.GEMINI_MODEL)
 
     st.markdown("---")
     st.markdown("### 🔧 Advanced")
